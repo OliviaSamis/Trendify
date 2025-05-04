@@ -734,6 +734,14 @@ export default function Home() {
           name: "Comedy Skits",
           updated: "3 days ago",
           popularity: 8,
+          popularity: 8,
+          difficulty: 4,
+          tags: ["commentary", "authentic", "engaging"],
+        },
+        {
+          name: "Comedy Skits",
+          updated: "3 days ago",
+          popularity: 8,
           difficulty: 7,
           tags: ["funny", "scripted", "creative"],
         },
@@ -1641,41 +1649,57 @@ export default function Home() {
         return
       }
 
-      // Simple keyword matching for demo purposes
-      // In a real app, this would use a more sophisticated AI model
+      // More sophisticated keyword matching
       const description = nicheDescription.toLowerCase()
       const availableNiches = niches[socialMedia] || []
 
-      let bestMatch = ""
-      let highestScore = 0
-
-      availableNiches.forEach((nicheItem) => {
+      // Create a scoring system with more weight on meaningful matches
+      const nicheScores = availableNiches.map((nicheItem) => {
         let score = 0
-        const nicheKeywords = [
-          nicheItem.name.toLowerCase(),
-          nicheItem.description.toLowerCase(),
-          ...nicheItem.description.toLowerCase().split(" "),
-        ]
 
+        // Extract keywords from niche name and description
+        const nicheKeywords = [
+          ...nicheItem.name.toLowerCase().split(/\s+/),
+          ...nicheItem.description.toLowerCase().split(/\s+/),
+        ].filter((word) => word.length > 3) // Only consider meaningful words
+
+        // Check for exact niche name match (highest priority)
+        if (description.includes(nicheItem.name.toLowerCase())) {
+          score += 10
+        }
+
+        // Check for keyword matches
         nicheKeywords.forEach((keyword) => {
           if (description.includes(keyword)) {
-            score += 1
+            // Add more weight to longer, more specific keywords
+            score += Math.min(keyword.length / 2, 3)
           }
         })
 
-        if (score > highestScore) {
-          highestScore = score
-          bestMatch = nicheItem.name
+        // Add some randomness to prevent always choosing the same niche
+        // but keep it small enough not to override strong matches
+        const randomFactor = Math.random() * 0.5
+
+        return {
+          niche: nicheItem.name,
+          score: score + randomFactor,
         }
       })
 
-      // If no good match found, pick the first niche
-      if (highestScore === 0 && availableNiches.length > 0) {
-        bestMatch = availableNiches[0].name
-      }
+      // Sort by score in descending order
+      nicheScores.sort((a, b) => b.score - a.score)
 
-      if (bestMatch) {
-        setNiche(bestMatch)
+      // For debugging
+      console.log("Niche scores:", nicheScores)
+
+      // Select the highest scoring niche if it has a reasonable score
+      if (nicheScores.length > 0 && nicheScores[0].score > 0.5) {
+        setNiche(nicheScores[0].niche)
+        setShowNichePrompt(false)
+      } else {
+        // If no good match, select a random niche instead of always the first one
+        const randomIndex = Math.floor(Math.random() * availableNiches.length)
+        setNiche(availableNiches[randomIndex].name)
         setShowNichePrompt(false)
       }
 
